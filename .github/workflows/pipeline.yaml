@@ -46,7 +46,7 @@ jobs:
           echo "tag=$(date +'%d%m%H%M')" >> $GITHUB_OUTPUT
           echo "$tag" > image_tag.txt
 
-      - name: Upload image tag artifact
+      - name: Image tag artifact
         uses: actions/upload-artifact@v3
         with:
           name: image-tag
@@ -80,6 +80,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Image tag artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: image-tag
+
+      - name: Read image tag
+        id: vars
+        run: echo "tag=$(cat image_tag.txt)" >> $GITHUB_OUTPUT
+
       - name: Set namespace based on branch
         id: ns
         run: |
@@ -93,11 +102,6 @@ jobs:
           else
             echo "namespace=default" >> $GITHUB_OUTPUT
           fi
-
-      - name: Image tag artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: image-tag
 
       - name: Set up Kubeconfig
         run: |
