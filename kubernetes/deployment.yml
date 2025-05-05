@@ -2,8 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: legal-api
-#  namespace: ${K8S_NAMESPACE}       We can parameterize namespace based on environment and replace value when run via pipeline
-  namespace: assignment
+  namespace: ${K8S_NAMESPACE}
 spec:
   replicas: 1
   selector:
@@ -13,14 +12,14 @@ spec:
     metadata:
       labels:
         app: legal-api
-#        namespace: ${K8S_NAMESPACE}     #We can parameterize namespace based on environment and replace value when run via pipeline
-        namespace: assignment
+        namespace: ${K8S_NAMESPACE}
+
     spec:
       imagePullSecrets:
         - name: my-registry-secret
       containers:
       - name: legal-api
-#        image: ${DOCKER_IMAGE}          #When run in pipeline, we shall replace the value with the latest tag of the image.
+        image: ${DOCKER_IMAGE}
         image: tarvinder91/legal-app-img-pvt-pvt:latest
         ports:
         - containerPort: 8000
