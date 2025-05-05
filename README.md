@@ -33,8 +33,3 @@ Configure the below secrets:
 | `DOCKER_USERNAME`   | Docker registry username                      |
 | `DOCKER_PASSWORD`   | Docker registry password or access token      |
 | `KUBECONFIG_BASE64` | Base64-encoded `kubeconfig` file              |
-
-
-## NOTE
-
-To show the authentication mechanism for kubernetes to authenticate to the Docker registry to pull images, we presume a secret 'my-registry-secret' to be exiting in the kubernetes cluster. NOTE that this is only the 'key' of the secret and not the value. We show this as we are not using public images but private.

@@ -13,14 +13,10 @@ spec:
       labels:
         app: legal-api
         namespace: ${K8S_NAMESPACE}
-
     spec:
-      imagePullSecrets:
-        - name: my-registry-secret
       containers:
       - name: legal-api
         image: ${DOCKER_IMAGE}
-        image: tarvinder91/legal-app-img-pvt-pvt:latest
         ports:
         - containerPort: 8000
         resources:
