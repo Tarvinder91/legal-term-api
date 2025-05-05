@@ -46,12 +46,6 @@ jobs:
           echo "tag=$(date +'%d%m%H%M')" >> $GITHUB_OUTPUT
           echo "$tag" > image_tag.txt
 
-      - name: Image tag artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: image-tag
-          path: image_tag.txt
-
       - name: Build Docker image
         run: |
           IMAGE_TAG=${{ steps.vars.outputs.tag }}
@@ -71,7 +65,13 @@ jobs:
           IMAGE_FULL="$DOCKER_REGISTRY/${{ secrets.DOCKER_USERNAME }}/$IMAGE_NAME-$IMAGE_TAG"
           docker tag $IMAGE_FULL $IMAGE_FULL
           docker push $IMAGE_FULL
-
+  
+      - name: Image tag artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: image-tag
+          path: image_tag.txt
+  
   deploy:
     if: github.event.pull_request.merged == true
     needs: build-and-test
