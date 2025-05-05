@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: legal-api-service
+#  namespace: ${K8S_NAMESPACE}      We can parameterize namespace based on environment and replace value when run via pipeline
+  namespace: assignment
+spec:
+  selector:
+    app: legal-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: LoadBalancer

@@ -1,0 +1,104 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    types: [closed]
+    branches:
+      - Devdeploy
+      - Fitdeploy
+      - main
+
+env:
+  DOCKER_REGISTRY: docker.io
+  IMAGE_NAME: legal-app-img-pvt-pvt
+  POETRY_VERSION: 1.6.1
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Set up Poetry ${{ env.POETRY_VERSION }}
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 - --version $POETRY_VERSION
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          poetry --version
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Run tests
+        run: poetry run pytest
+
+      - name: Generate image tag
+        id: vars
+        run: echo "tag=$(date +'%d%m%H%M')" >> $GITHUB_OUTPUT
+
+      - name: Build Docker image
+        run: |
+          IMAGE_TAG=${{ steps.vars.outputs.tag }}
+          IMAGE_FULL="$DOCKER_REGISTRY/${{ secrets.DOCKER_USERNAME }}/$IMAGE_NAME-$IMAGE_TAG"
+          docker build -t $IMAGE_FULL .
+
+  deploy:
+    if: github.event.pull_request.merged == true
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Generate image tag
+        id: vars
+        run: echo "tag=$(date +'%d%m%H%M')" >> $GITHUB_OUTPUT
+
+      - name: Set namespace based on branch
+        id: ns
+        run: |
+          branch="${{ github.ref_name }}"
+          if [[ "$branch" == "Devdeploy" ]]; then
+            echo "namespace=dev" >> $GITHUB_OUTPUT
+          elif [[ "$branch" == "Fitdeploy" ]]; then
+            echo "namespace=fit" >> $GITHUB_OUTPUT
+          elif [[ "$branch" == "main" ]]; then
+            echo "namespace=prod" >> $GITHUB_OUTPUT
+          else
+            echo "namespace=default" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Log in to Docker Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push Docker image
+        run: |
+          IMAGE_TAG=${{ steps.vars.outputs.tag }}
+          IMAGE_FULL="$DOCKER_REGISTRY/${{ secrets.DOCKER_USERNAME }}/$IMAGE_NAME-$IMAGE_TAG"
+          docker tag $IMAGE_FULL $IMAGE_FULL
+          docker push $IMAGE_FULL
+
+      - name: Set up Kubeconfig
+        run: |
+          echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 --decode > kubeconfig
+        env:
+          KUBECONFIG: ./kubeconfig
+
+      - name: Deploy to Kubernetes
+        run: |
+          export KUBECONFIG=./kubeconfig
+          export K8S_NAMESPACE=${{ steps.ns.outputs.namespace }}
+          export DOCKER_IMAGE=$DOCKER_REGISTRY/${{ secrets.DOCKER_USERNAME }}/$IMAGE_NAME-${{ steps.vars.outputs.tag }}
+          envsubst < ./k8s/deployment.yaml | kubectl apply -f -
